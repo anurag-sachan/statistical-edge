@@ -1263,16 +1263,16 @@ def baseline_report(df):
 
 
 # ============================================================
-# INSTRUMENT BEHAVIOUR / C5 -> C6 RANGE MICROSTRUCTURE RESEARCH
+# INSTRUMENT BEHAVIOUR / RANGE MICROSTRUCTURE RESEARCH
 # ============================================================
 
-# IMPORTANT:
-# C4 close is only the context point inside the prior 8H range.
-# The predictive/reference anchor for this section is C5 HIGH / C5 LOW.
-# Outcomes are measured on C6 only, while max projections use C5+C6.
-# This avoids treating C4 close as an entry or target anchor.
+# IMPORTANT: this section is deliberately NOT optimized around the
+# user's 750/800 target. 750/800 is included as one reference level,
+# while the main outputs describe how BTC actually travels: MFE, MAE,
+# excursion distributions, range penetration, continuation/reversion,
+# and time-to-level. This preserves the instrument's behaviour.
 
-ADV_FUTURE_BARS = 2                  # C5 + C6 only
+ADV_FUTURE_BARS = 12                 # 24H after C4 on 2H data
 REFERENCE_LEVELS_PIPS = [50,100,250,500,750,800,1000,1500,2000]
 ADV_PIP_SIZE = 0.01                  # BTC: 0.01 price = 1 pip
 
@@ -1292,311 +1292,228 @@ def _zone_pct(x):
     return "90-100%"
 
 
-def _c5_side(c5, hi, lo):
-    """Classify C5 by which prior-8H edge it breaks; 0 if neither/both."""
-    up = c5["high"] > hi
-    dn = c5["low"] < lo
-    if up and not dn:
-        return 1
-    if dn and not up:
-        return -1
-    return 0
+def _path_stats(future, entry):
+    """Pure descriptive excursion statistics; no TP/SL assumption."""
+    highs = np.array([c["high"] for c in future], dtype=float)
+    lows = np.array([c["low"] for c in future], dtype=float)
+    closes = np.array([c["close"] for c in future], dtype=float)
 
-
-def _c5c6_stats(c4, c5, c6):
-    """
-    Two complementary views of the same C5->C6 sequence.
-
-    1) C4-close anchored: maximum MFE/MAE reached anywhere across C5+C6.
-       This answers how far price travelled from the already-known C4 close.
-
-    2) C5 HIGH/LOW anchored: C6 extension and adverse excursion relative to
-       the actual C5 HIGH/LOW. This answers what happened after C5 established
-       its extremes.
-    """
-    c4_close = float(c4["close"])
-    c5_hi = float(c5["high"])
-    c5_lo = float(c5["low"])
-    c5_close = float(c5["close"])
-    c6_hi = float(c6["high"])
-    c6_lo = float(c6["low"])
-    c6_close = float(c6["close"])
-
-    # ------------------------------------------------------------
-    # C4-close anchor: full C5+C6 path (maximum distance).
-    # ------------------------------------------------------------
-    c4_long_mfe = max(0.0, max(c5_hi, c6_hi) - c4_close)
-    c4_long_mae = max(0.0, c4_close - min(c5_lo, c6_lo))
-    c4_short_mfe = max(0.0, c4_close - min(c5_lo, c6_lo))
-    c4_short_mae = max(0.0, max(c5_hi, c6_hi) - c4_close)
-
-    # ------------------------------------------------------------
-    # C5 HIGH/LOW anchor: C6 extension/adverse excursion only.
-    # ------------------------------------------------------------
-    long_mfe = max(0.0, c6_hi - c5_hi)
-    long_mae = max(0.0, c5_hi - c6_lo)
-    short_mfe = max(0.0, c5_lo - c6_lo)
-    short_mae = max(0.0, c6_hi - c5_lo)
-
+    up = highs - entry
+    down = entry - lows
     return {
-        "C5_range_pips": _pip(c5_hi - c5_lo),
-        "C6_range_pips": _pip(c6_hi - c6_lo),
-
-        # C5 H/L distances from the C4 close: the bridge between the two views.
-        "C4_to_C5_high_pips": _pip(c5_hi - c4_close),
-        "C4_to_C5_low_pips": _pip(c4_close - c5_lo),
-
-        # Full C5+C6 maximum excursion from C4 close.
-        "MFE_long_C4_close_C5C6_pips": _pip(c4_long_mfe),
-        "MAE_long_C4_close_C5C6_pips": _pip(c4_long_mae),
-        "MFE_short_C4_close_C5C6_pips": _pip(c4_short_mfe),
-        "MAE_short_C4_close_C5C6_pips": _pip(c4_short_mae),
-
-        # C6 extension beyond C5 extremes.
-        "C6_extend_above_C5_high_pips": _pip(long_mfe),
-        "C6_extend_below_C5_low_pips": _pip(short_mfe),
-        "C6_close_from_C5_high_pips": _pip(c6_close - c5_hi),
-        "C6_close_from_C5_low_pips": _pip(c6_close - c5_lo),
-        "MFE_long_C5_high_pips": _pip(long_mfe),
-        "MAE_long_C5_high_pips": _pip(long_mae),
-        "MFE_short_C5_low_pips": _pip(short_mfe),
-        "MAE_short_C5_low_pips": _pip(short_mae),
-
-        # C5+C6 maximum projection, explicitly anchored to C5 H/L.
-        "max_projection_up_C5C6_from_C5_high_pips": _pip(max(0.0, max(c5_hi, c6_hi) - c5_hi)),
-        "max_projection_down_C5C6_from_C5_low_pips": _pip(max(0.0, c5_lo - min(c5_lo, c6_lo))),
-        "C6_breaks_C5_high": int(c6_hi > c5_hi),
-        "C6_breaks_C5_low": int(c6_lo < c5_lo),
-        "C6_close_above_C5_high": int(c6_close > c5_hi),
-        "C6_close_below_C5_low": int(c6_close < c5_lo),
-        "C6_inside_C5_range": int(c5_lo <= c6_close <= c5_hi),
-        "C6_high_sweep_C5_high_reject": int(c6_hi > c5_hi and c6_close < c5_hi),
-        "C6_low_sweep_C5_low_reject": int(c6_lo < c5_lo and c6_close > c5_lo),
+        "mfe_up_pips": _pip(up.max()),
+        "mfe_down_pips": _pip(down.max()),
+        "mae_long_pips": _pip(max(0.0, down.max())),
+        "mae_short_pips": _pip(max(0.0, up.max())),
+        "close_move_pips": _pip(closes[-1] - entry),
     }
 
 
-def _first_level_time_from_c5(future, c5_hi, c5_lo, levels):
-    """First C6/C5+C6 bar that reaches a favourable level from C5 HIGH/LOW."""
-    out = {}
+def _first_level_time(future, entry, direction, levels):
+    """Return first 2H bar on which each favourable level is touched."""
+    out = {f"{direction}_touch_{n}_pips_bar": np.nan for n in levels}
     for n in levels:
-        up_level = c5_hi + n * ADV_PIP_SIZE
-        down_level = c5_lo - n * ADV_PIP_SIZE
-        up_bar = np.nan
-        down_bar = np.nan
+        level = entry + direction * n * ADV_PIP_SIZE
         for j, c in enumerate(future, start=1):
-            if pd.isna(up_bar) and c["high"] >= up_level:
-                up_bar = j
-            if pd.isna(down_bar) and c["low"] <= down_level:
-                down_bar = j
-            if not pd.isna(up_bar) and not pd.isna(down_bar):
+            hit = c["high"] >= level if direction == 1 else c["low"] <= level
+            if hit:
+                out[f"{direction}_touch_{n}_pips_bar"] = j
                 break
-        out[f"up_from_C5_high_touch_{n}_pips_bar"] = up_bar
-        out[f"down_from_C5_low_touch_{n}_pips_bar"] = down_bar
     return out
 
 
+def _first_break_sequence(future, hi, lo):
+    """No invented intrabar ordering when both range edges are hit."""
+    first = 0
+    first_bar = np.nan
+    opposite = 0
+    ambiguous = 0
+    for j, c in enumerate(future, start=1):
+        up = c["high"] > hi
+        dn = c["low"] < lo
+        if first == 0:
+            if up and dn:
+                ambiguous = 1
+                break
+            if up:
+                first, first_bar = 1, j
+            elif dn:
+                first, first_bar = -1, j
+        elif first == 1 and dn:
+            opposite = 1
+            break
+        elif first == -1 and up:
+            opposite = 1
+            break
+    return first, first_bar, opposite, ambiguous
+
+
 def instrument_behavior_analysis(raw_df):
-    """Study what C6 does relative to C5 HIGH/LOW; C5+C6 give max projection."""
-    print("\n" + "="*70)
-    print("C5 HIGH/LOW -> C6 INSTRUMENT BEHAVIOUR RESEARCH")
+    """Deep descriptive study of BTC's 8H -> future behaviour."""
+    print("\\n" + "="*70)
+    print("INSTRUMENT BEHAVIOUR / ENTRY-ZONE RESEARCH")
     print("="*70)
 
     rows = []
-    # Need C1..C4 + C5 + C6.
-    for i in range(4, len(raw_df) - 1):
-        c1, c2, c3, c4 = [raw_df.iloc[i-k] for k in range(4, 0, -1)]
-        c5 = raw_df.iloc[i]
-        c6 = raw_df.iloc[i + 1]
-        future = [c5, c6]
+    max_future = min(ADV_FUTURE_BARS, len(raw_df) - 4)
+    for i in range(4, len(raw_df) - max_future + 1):
+        c1,c2,c3,c4 = [raw_df.iloc[i-k] for k in range(4,0,-1)]
+        future = [raw_df.iloc[i+j] for j in range(max_future)]
 
-        prior_hi = max(c["high"] for c in (c1, c2, c3, c4))
-        prior_lo = min(c["low"] for c in (c1, c2, c3, c4))
-        prior_rr = max(prior_hi - prior_lo, 1e-12)
-        c5_pos_close = np.clip((c5["close"] - prior_lo) / prior_rr, 0, 1)
-        c5_high_pos = np.clip((c5["high"] - prior_lo) / prior_rr, 0, 1)
-        c5_low_pos = np.clip((c5["low"] - prior_lo) / prior_rr, 0, 1)
+        hi=max(c["high"] for c in (c1,c2,c3,c4))
+        lo=min(c["low"] for c in (c1,c2,c3,c4))
+        rr=max(hi-lo,1e-12)
+        entry=c4["close"]
+        pos=np.clip((entry-lo)/rr,0,1)
 
-        side = _c5_side(c5, prior_hi, prior_lo)
-        stats = _c5c6_stats(c4, c5, c6)
+        c34_hi=max(c3["high"],c4["high"])
+        c34_lo=min(c3["low"],c4["low"])
+        body_hi=max(c3["open"],c3["close"],c4["open"],c4["close"])
+        body_lo=min(c3["open"],c3["close"],c4["open"],c4["close"])
+        body_rr=max(body_hi-body_lo,1e-12)
 
-        row = {
-            "timestamp": c4["timestamp"],
-            "C4_close": c4["close"],
-            "prior_8h_high": prior_hi,
-            "prior_8h_low": prior_lo,
-            "prior_8h_range_pips": _pip(prior_rr),
-            # C5 is now the reference candle; these are context only.
-            "C5_close": c5["close"],
-            "C5_high": c5["high"],
-            "C5_low": c5["low"],
-            "C5_close_position_pct_8h": c5_pos_close * 100,
-            "C5_high_position_pct_8h": c5_high_pos * 100,
-            "C5_low_position_pct_8h": c5_low_pos * 100,
-            "C5_high_zone_8h": _zone_pct(c5_high_pos),
-            "C5_low_zone_8h": _zone_pct(c5_low_pos),
-            "C5_breaks_prior_8h_high": int(c5["high"] > prior_hi),
-            "C5_breaks_prior_8h_low": int(c5["low"] < prior_lo),
-            "C5_high_break_only": int(c5["high"] > prior_hi and c5["low"] >= prior_lo),
-            "C5_low_break_only": int(c5["low"] < prior_lo and c5["high"] <= prior_hi),
-            "C5_break_side": side,
-            "C5_high_sweep_reject_prior_8h": int(c5["high"] > prior_hi and c5["close"] < prior_hi),
-            "C5_low_sweep_reject_prior_8h": int(c5["low"] < prior_lo and c5["close"] > prior_lo),
-            "C5_high_distance_from_prior_8h_high_pips": _pip(max(0.0, c5["high"] - prior_hi)),
-            "C5_low_distance_from_prior_8h_low_pips": _pip(max(0.0, prior_lo - c5["low"])),
-            **stats,
+        first, first_bar, opposite, ambiguous=_first_break_sequence(future,hi,lo)
+        ps=_path_stats(future,entry)
+
+        row={
+            "timestamp":c4["timestamp"],
+            "C4_close":entry,
+            "range_high":hi,
+            "range_low":lo,
+            "range_pips":_pip(rr),
+            "C4_position_pct":pos*100,
+            "C4_zone":_zone_pct(pos),
+            "dist_high_pips":_pip(hi-entry),
+            "dist_low_pips":_pip(entry-lo),
+            "dist_high_pct_range":(hi-entry)/rr*100,
+            "dist_low_pct_range":(entry-lo)/rr*100,
+            "C3_high":c3["high"], "C4_high":c4["high"],
+            "C3_low":c3["low"], "C4_low":c4["low"],
+            "C3C4_high":c34_hi, "C3C4_low":c34_lo,
+            "C3C4_body_high":body_hi, "C3C4_body_low":body_lo,
+            "C3C4_body_range_pips":_pip(body_rr),
+            "C3C4_body_pct_8h":body_rr/rr*100,
+            "C3C4_wick_range_pct_8h":(c34_hi-c34_lo)/rr*100,
+            "C5_close_between_C3_C4_highs":int(min(c3["high"],c4["high"])<=future[0]["close"]<=max(c3["high"],c4["high"])),
+            "C5_close_between_C3_C4_lows":int(min(c3["low"],c4["low"])<=future[0]["close"]<=max(c3["low"],c4["low"])),
+            "C5_above_both_C3_C4_highs":int(future[0]["close"]>max(c3["high"],c4["high"])),
+            "C5_below_both_C3_C4_lows":int(future[0]["close"]<min(c3["low"],c4["low"])),
+            "C5_breaks_8h_high":int(future[0]["high"]>hi),
+            "C5_breaks_8h_low":int(future[0]["low"]<lo),
+            "C5_high_sweep_reject":int(future[0]["high"]>hi and future[0]["close"]<hi),
+            "C5_low_sweep_reject":int(future[0]["low"]<lo and future[0]["close"]>lo),
+            "first_break_side":first,
+            "first_break_bar":first_bar,
+            "opposite_side_after_first_break":opposite,
+            "ambiguous_first_break":ambiguous,
+            **ps,
         }
-        row.update(_first_level_time_from_c5(future, c5["high"], c5["low"], REFERENCE_LEVELS_PIPS))
+        row.update(_first_level_time(future,entry,1,REFERENCE_LEVELS_PIPS))
+        row.update(_first_level_time(future,entry,-1,REFERENCE_LEVELS_PIPS))
         rows.append(row)
 
-    out = pd.DataFrame(rows)
-    out.to_csv(OUTPUT_DIR / "instrument_behavior_rows.csv", index=False)
+    out=pd.DataFrame(rows)
+    out.to_csv(OUTPUT_DIR/"instrument_behavior_rows.csv",index=False)
 
     # --------------------------------------------------------
-    # 12/18: C5-side outcomes. These are the primary reports.
+    # Descriptive range-zone report: this is the primary report.
     # --------------------------------------------------------
-    zone = out.groupby("C5_high_zone_8h", observed=False).agg(
-        n=("timestamp", "size"),
-        median_C5_range_pips=("C5_range_pips", "median"),
-        median_MFE_long=("MFE_long_C5_high_pips", "median"),
-        p75_MFE_long=("MFE_long_C5_high_pips", lambda x: x.quantile(.75)),
-        median_MAE_long=("MAE_long_C5_high_pips", "median"),
-        median_MFE_short=("MFE_short_C5_low_pips", "median"),
-        p75_MFE_short=("MFE_short_C5_low_pips", lambda x: x.quantile(.75)),
-        median_MAE_short=("MAE_short_C5_low_pips", "median"),
-        C6_break_C5_high=("C6_breaks_C5_high", "mean"),
-        C6_break_C5_low=("C6_breaks_C5_low", "mean"),
-        C6_close_above_C5_high=("C6_close_above_C5_high", "mean"),
-        C6_close_below_C5_low=("C6_close_below_C5_low", "mean"),
-        C6_inside_C5_range=("C6_inside_C5_range", "mean"),
-    ).reset_index().rename(columns={"C5_high_zone_8h": "C5_zone"})
-    zone.to_csv(OUTPUT_DIR / "instrument_behavior_by_range_zone.csv", index=False)
-
-    # Side-specific C5 HIGH / C5 LOW conditioning.
-    # Upside outcomes use C5 HIGH location; downside outcomes use C5 LOW location.
-    side_zone_rows = []
-    for side, zone_col, mfe_col, mae_col, break_col, close_col in [
-        ("up_from_C5_high", "C5_high_zone_8h", "MFE_long_C5_high_pips", "MAE_long_C5_high_pips", "C6_breaks_C5_high", "C6_close_above_C5_high"),
-        ("down_from_C5_low", "C5_low_zone_8h", "MFE_short_C5_low_pips", "MAE_short_C5_low_pips", "C6_breaks_C5_low", "C6_close_below_C5_low"),
-    ]:
-        for zone_name, g in out.groupby(zone_col, observed=False):
-            side_zone_rows.append({
-                "reference_side": side,
-                "C5_zone": zone_name,
-                "n": len(g),
-                "median_MFE_pips": g[mfe_col].median(),
-                "p75_MFE_pips": g[mfe_col].quantile(.75),
-                "p90_MFE_pips": g[mfe_col].quantile(.90),
-                "median_MAE_pips": g[mae_col].median(),
-                "p75_MAE_pips": g[mae_col].quantile(.75),
-                # Same side measured from C4 close across the full C5+C6 path.
-                "median_MFE_from_C4_pips": g[
-                    "MFE_long_C4_close_C5C6_pips" if side == "up_from_C5_high"
-                    else "MFE_short_C4_close_C5C6_pips"
-                ].median(),
-                "p75_MFE_from_C4_pips": g[
-                    "MFE_long_C4_close_C5C6_pips" if side == "up_from_C5_high"
-                    else "MFE_short_C4_close_C5C6_pips"
-                ].quantile(.75),
-                "median_MAE_from_C4_pips": g[
-                    "MAE_long_C4_close_C5C6_pips" if side == "up_from_C5_high"
-                    else "MAE_short_C4_close_C5C6_pips"
-                ].median(),
-                "p75_MAE_from_C4_pips": g[
-                    "MAE_long_C4_close_C5C6_pips" if side == "up_from_C5_high"
-                    else "MAE_short_C4_close_C5C6_pips"
-                ].quantile(.75),
-                "median_C4_to_C5_reference_pips": g[
-                    "C4_to_C5_high_pips" if side == "up_from_C5_high"
-                    else "C4_to_C5_low_pips"
-                ].median(),
-                "C6_break_reference": g[break_col].mean(),
-                "C6_close_beyond_reference": g[close_col].mean(),
-            })
-    side_zone = pd.DataFrame(side_zone_rows)
-    side_zone.to_csv(OUTPUT_DIR / "c5c6_behavior_by_side_zone.csv", index=False)
+    zone=out.groupby("C4_zone",observed=False).agg(
+        n=("timestamp","size"),
+        median_range_pips=("range_pips","median"),
+        mean_range_pips=("range_pips","mean"),
+        median_MFE_up=("mfe_up_pips","median"),
+        median_MFE_down=("mfe_down_pips","median"),
+        p75_MFE_up=("mfe_up_pips",lambda x:x.quantile(.75)),
+        p75_MFE_down=("mfe_down_pips",lambda x:x.quantile(.75)),
+        p90_MFE_up=("mfe_up_pips",lambda x:x.quantile(.90)),
+        p90_MFE_down=("mfe_down_pips",lambda x:x.quantile(.90)),
+        median_MAE_long=("mae_long_pips","median"),
+        median_MAE_short=("mae_short_pips","median"),
+        up_first=("first_break_side",lambda x:(x==1).mean()),
+        down_first=("first_break_side",lambda x:(x==-1).mean()),
+        ambiguous_first=("ambiguous_first_break","mean"),
+        opposite_after_first=("opposite_side_after_first_break","mean"),
+    ).reset_index()
+    zone.to_csv(OUTPUT_DIR/"instrument_behavior_by_range_zone.csv",index=False)
 
     # --------------------------------------------------------
-    # 13: C5+C6 max projection as % of the PRIOR 8H range.
+    # Range penetration: how much of the existing 8H range is
+    # normally consumed before extension? This avoids forcing a
+    # fixed target.
     # --------------------------------------------------------
-    out["MFE_long_pct_prior_8h"] = out["MFE_long_C5_high_pips"] / out["prior_8h_range_pips"] * 100
-    out["MFE_short_pct_prior_8h"] = out["MFE_short_C5_low_pips"] / out["prior_8h_range_pips"] * 100
-    penetration_rows = []
-    for side, zone_col, mfe_col in [
-        ("up_from_C5_high", "C5_high_zone_8h", "MFE_long_pct_prior_8h"),
-        ("down_from_C5_low", "C5_low_zone_8h", "MFE_short_pct_prior_8h"),
-    ]:
-        for zone_name, g in out.groupby(zone_col, observed=False):
-            penetration_rows.append({
-                "reference_side": side,
-                "C5_zone": zone_name,
-                "n": len(g),
-                "median_MFE_pct_prior_8h": g[mfe_col].median(),
-                "p75_MFE_pct_prior_8h": g[mfe_col].quantile(.75),
-                "p90_MFE_pct_prior_8h": g[mfe_col].quantile(.90),
-            })
-    penetration = pd.DataFrame(penetration_rows)
-    penetration.to_csv(OUTPUT_DIR / "range_penetration_by_zone.csv", index=False)
+    out["MFE_up_pct_8h"] = out["mfe_up_pips"] / out["range_pips"] * 100
+    out["MFE_down_pct_8h"] = out["mfe_down_pips"] / out["range_pips"] * 100
+    penetration=out.groupby("C4_zone",observed=False).agg(
+        n=("timestamp","size"),
+        median_MFE_up_pct_8h=("MFE_up_pct_8h","median"),
+        p75_MFE_up_pct_8h=("MFE_up_pct_8h",lambda x:x.quantile(.75)),
+        p90_MFE_up_pct_8h=("MFE_up_pct_8h",lambda x:x.quantile(.90)),
+        median_MFE_down_pct_8h=("MFE_down_pct_8h","median"),
+        p75_MFE_down_pct_8h=("MFE_down_pct_8h",lambda x:x.quantile(.75)),
+        p90_MFE_down_pct_8h=("MFE_down_pct_8h",lambda x:x.quantile(.90)),
+    ).reset_index()
+    penetration.to_csv(OUTPUT_DIR/"range_penetration_by_zone.csv",index=False)
 
     # --------------------------------------------------------
-    # 14: probability that C6 extends X pips beyond C5 HIGH/LOW.
+    # Reference target distribution. These are descriptive hit
+    # probabilities from C4, NOT TP-before-SL trading signals.
     # --------------------------------------------------------
-    target_rows = []
-    for direction, zone_col, col in [
-        ("up_from_C5_high", "C5_high_zone_8h", "MFE_long_C5_high_pips"),
-        ("down_from_C5_low", "C5_low_zone_8h", "MFE_short_C5_low_pips"),
-    ]:
-        for zone_name, g in out.groupby(zone_col, observed=False):
+    target_rows=[]
+    for zone_name,g in out.groupby("C4_zone",observed=False):
+        for d,col in [("up","mfe_up_pips"),("down","mfe_down_pips")]:
             for level in REFERENCE_LEVELS_PIPS:
                 target_rows.append({
-                    "zone": zone_name,
-                    "direction": direction,
-                    "level_pips": level,
-                    "n": len(g),
-                    "hit_probability": (g[col] >= level).mean(),
-                    "median_mfe_pips": g[col].median(),
-                    "p75_mfe_pips": g[col].quantile(.75),
+                    "zone":zone_name,"direction":d,
+                    "level_pips":level,"n":len(g),
+                    "hit_probability":(g[col]>=level).mean(),
+                    "median_mfe_pips":g[col].median(),
+                    "p75_mfe_pips":g[col].quantile(.75),
                 })
-    target_df = pd.DataFrame(target_rows)
-    target_df.to_csv(OUTPUT_DIR / "reference_excursion_levels.csv", index=False)
+    target_df=pd.DataFrame(target_rows)
+    target_df.to_csv(OUTPUT_DIR/"reference_excursion_levels.csv",index=False)
 
     # --------------------------------------------------------
-    # 16: C5 structural conditions -> C6 continuation/reversion.
+    # C3/C4 -> C5 structural relations.
     # --------------------------------------------------------
-    structures = {
-        "C5_high_break_only": out["C5_high_break_only"] == 1,
-        "C5_low_break_only": out["C5_low_break_only"] == 1,
-        "C5_high_sweep_rejection": out["C5_high_sweep_reject_prior_8h"] == 1,
-        "C5_low_sweep_rejection": out["C5_low_sweep_reject_prior_8h"] == 1,
-        "C5_breaks_both_8h_edges": (out["C5_breaks_prior_8h_high"] == 1) & (out["C5_breaks_prior_8h_low"] == 1),
-        "C5_inside_prior_8h": (out["C5_breaks_prior_8h_high"] == 0) & (out["C5_breaks_prior_8h_low"] == 0),
+    structures={
+        "C5_between_C3_C4_highs":out["C5_close_between_C3_C4_highs"]==1,
+        "C5_between_C3_C4_lows":out["C5_close_between_C3_C4_lows"]==1,
+        "C5_above_both_C3_C4_highs":out["C5_above_both_C3_C4_highs"]==1,
+        "C5_below_both_C3_C4_lows":out["C5_below_both_C3_C4_lows"]==1,
+        "C5_high_sweep_rejection":out["C5_high_sweep_reject"]==1,
+        "C5_low_sweep_rejection":out["C5_low_sweep_reject"]==1,
+        "C5_high_break":out["C5_breaks_8h_high"]==1,
+        "C5_low_break":out["C5_breaks_8h_low"]==1,
     }
-    sr = []
-    for name, mask in structures.items():
-        g = out[mask]
-        if len(g) < MIN_PATTERN_N:
-            continue
+    sr=[]
+    for name,mask in structures.items():
+        g=out[mask]
+        if len(g)<MIN_PATTERN_N: continue
         sr.append({
-            "pattern": name,
-            "n": len(g),
-            "C6_break_C5_high": g.C6_breaks_C5_high.mean(),
-            "C6_break_C5_low": g.C6_breaks_C5_low.mean(),
-            "C6_close_above_C5_high": g.C6_close_above_C5_high.mean(),
-            "C6_close_below_C5_low": g.C6_close_below_C5_low.mean(),
-            "C6_inside_C5_range": g.C6_inside_C5_range.mean(),
-            "median_MFE_long": g.MFE_long_C5_high_pips.median(),
-            "median_MFE_short": g.MFE_short_C5_low_pips.median(),
-            "median_MAE_long": g.MAE_long_C5_high_pips.median(),
-            "median_MAE_short": g.MAE_short_C5_low_pips.median(),
+            "pattern":name,"n":len(g),
+            "up_first":(g.first_break_side==1).mean(),
+            "down_first":(g.first_break_side==-1).mean(),
+            "opposite_after_first":g.opposite_side_after_first_break.mean(),
+            "median_MFE_up":g.mfe_up_pips.median(),
+            "median_MFE_down":g.mfe_down_pips.median(),
+            "p75_MFE_up":g.mfe_up_pips.quantile(.75),
+            "p75_MFE_down":g.mfe_down_pips.quantile(.75),
+            "median_MAE_long":g.mae_long_pips.median(),
+            "median_MAE_short":g.mae_short_pips.median(),
         })
-    pd.DataFrame(sr).to_csv(OUTPUT_DIR / "C3C4_C5_structure_behavior.csv", index=False)
+    pd.DataFrame(sr).to_csv(OUTPUT_DIR/"C3C4_C5_structure_behavior.csv",index=False)
 
-    print("\nC5 HIGH/LOW -> C6 BEHAVIOUR BY C5 HIGH ZONE")
+    # --------------------------------------------------------
+    # Print only the facts most useful for understanding BTC.
+    # --------------------------------------------------------
+    print("\\nRANGE-ZONE BEHAVIOUR")
     print(zone.to_string(index=False))
-    print("\nC6 EXTENSION PROBABILITIES FROM C5 HIGH/LOW")
-    print(target_df[target_df.level_pips.isin([500, 750, 800, 1000])].to_string(index=False))
-    print("\nC5 STRUCTURE -> C6")
+    print("\\nREFERENCE EXCURSION LEVELS (not TP/SL optimized)")
+    print(target_df[target_df.level_pips.isin([500,750,800,1000])].to_string(index=False))
+    print("\\nC3/C4 -> C5 STRUCTURE")
     print(pd.DataFrame(sr).to_string(index=False))
-    print("\nSaved C5/C6 instrument behaviour files to:", OUTPUT_DIR.resolve())
+    print("\\nSaved instrument behaviour files to:", OUTPUT_DIR.resolve())
     return out
 
 
@@ -1628,8 +1545,9 @@ def main():
         dataset
     )
 
-    # Descriptive instrument-behaviour study. C4 is context; the
-    # C5 HIGH / C5 LOW are the reference levels and C6 is the outcome.
+    # Descriptive instrument-behaviour study. This is deliberately
+    # independent of the ML classifier and does not optimize for a
+    # fixed 750/800-pip objective.
     instrument_behavior_analysis(
         df
     )
