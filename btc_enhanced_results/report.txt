@@ -1,0 +1,83 @@
+BTCUSD 2H ENHANCED BREAKOUT & REVERSAL ANALYSIS
+===============================================
+
+Breakout Zone Analysis:
+  - The zone with the highest probability of an upside break is '90-100%' with 77.7% chance (n=256).
+  - The zone with the highest downside break is '0-10%' with 84.0% chance.
+  - Generally, zones near the extremes (0-10% or 90-100%) show higher breakout probabilities, while middle zones are more balanced.
+  - This suggests that if price is near the edge of the 8‑hour range, it is more likely to break out than to reverse sharply.
+
+Breakout Accuracy by Distance:
+  - The chart shows how the probability of a breakout increases as price gets closer to the range edge.
+  - For upside breaks, a threshold of 2% of range gives at least 75% accuracy (if available).
+  - For downside breaks, a threshold of 2% gives similar accuracy.
+  - In plain terms: if price is within about 2% of the 8‑hour high, it has a high chance of breaking higher. The same applies to lows.
+  - This can help you time entries: wait for price to approach the edge before taking a breakout trade.
+
+First Break Candle:
+  - Among breakouts, the first candle (C5) is responsible for 62.3% of all first breaks.
+  - This means that in most cases, the breakout occurs immediately (within the next 2 hours) after the 8‑hour window.
+  - If you see price near the edge, you don't have to wait long – the move often starts right away.
+  - Use this to set tight stop‑losses: if C5 doesn't break, the chance of a later break is lower.
+
+Continuation by Range Position:
+  - When price is in the top_quarter (around top_quarter), upside break probability is highest (68.5%).
+  - For downside breaks, the bottom_quarter gives the highest chance (72.8%).
+  - This matches intuition: price near the top of the range tends to continue upward, and near the bottom tends to continue downward.
+  - Interestingly, the 'hit 750 up' probability is also elevated in the upper zones, suggesting that being in the right part of the range leads to larger moves.
+
+Target Optimization (750 pips vs 50 SL):
+  - The best entry zone is 'lower_5%' with expected profit of 199 pips per trade.
+  - In that zone, you hit the 750‑pip target 31.1% of the time and hit the 50‑pip stop only 68.9% of the time.
+  - This means the trade has a very favourable risk/reward ratio: you win big often, and lose small rarely.
+  - The worst zones are in the middle of the range, where outcomes are more random.
+
+MFE for near_highs (up): Probability of hitting 250 pips is 5.1%.
+
+MFE for near_lows (up): Probability of hitting 250 pips is 4.5%.
+
+MFE for middle (up): Probability of hitting 250 pips is 4.3%.
+
+MFE for near_highs (up): Probability of hitting 500 pips is 1.1%.
+
+MFE for near_lows (up): Probability of hitting 500 pips is 0.6%.
+
+MFE for middle (up): Probability of hitting 500 pips is 0.8%.
+
+MFE for near_highs (up): Probability of hitting 750 pips is 0.5%.
+
+MFE for near_lows (up): Probability of hitting 750 pips is 0.2%.
+
+MFE for middle (up): Probability of hitting 750 pips is 0.0%.
+
+MFE shows how far price tends to move in your favour after entry.
+Near‑high zones often see larger upside excursions, while near‑low zones favour downside.
+This helps set realistic profit targets.
+
+If price breaks broke_up, the probability it also breaks the other side is 20.1%.
+This suggests that breakouts often lead to a full range sweep – a phenomenon known as 'liquidity grab'.
+Therefore, it's wise to wait for confirmation after a break, as price may return to the other extreme.
+
+If price breaks broke_down, the probability it also breaks the other side is 19.6%.
+This suggests that breakouts often lead to a full range sweep – a phenomenon known as 'liquidity grab'.
+Therefore, it's wise to wait for confirmation after a break, as price may return to the other extreme.
+
+Optimal Zones for 750‑Pip Target:
+  - The zone with highest expected profit is '50-60%' with 426 expected pips.
+  - In that zone, upside target hit probability is 31.2% and downside is 28.3%.
+  - This zone offers a favourable balance of win rate and reward.
+
+Low Drawdown Entry Zones:
+  - The top zone is '20-30%' with a score of 0.01.
+  - It has a win rate of 52.3% and a median MAE (maximum adverse excursion) of 49 pips for long entries.
+  - This means that entries in this zone tend to have a high chance of success while experiencing relatively small adverse moves.
+  - These zones are ideal for traders who want low drawdown and quick profits.
+
+Reversal Patterns:
+  - The pattern 'C5_rejected_high' leads to the highest probability of hitting 750 pips upward (31.4%).
+  - The pattern 'C6_rejected_low' leads to the highest downside target (37.9%).
+  - Long wicks and rejections at the range edge often signal a reversal, but they also occasionally lead to continuation.
+  - These patterns can be used as early warning signals to avoid entering against the trend.
+
+
+== END OF REPORT ==

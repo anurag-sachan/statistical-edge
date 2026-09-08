@@ -1,0 +1,70 @@
+======================================================================
+BTCUSD 2H TRADING ANALYSIS - COMPREHENSIVE REPORT
+Generated: 2026-09-08 19:04:59
+======================================================================
+
+1. OPTIMAL ENTRY ZONES (750 target, 50 SL)
+----------------------------------------------------------------------
+        50-60%: Expected    426 pips | Hit 750+  59.5% | R:R   1.5x | n= 311
+         0-10%: Expected    392 pips | Hit 750+  55.2% | R:R   1.2x | n= 306
+        20-30%: Expected    378 pips | Hit 750+  53.5% | R:R   1.2x | n= 327
+        10-20%: Expected    376 pips | Hit 750+  53.2% | R:R   1.1x | n= 374
+       90-100%: Expected    337 pips | Hit 750+  48.3% | R:R   0.9x | n= 329
+        40-50%: Expected    332 pips | Hit 750+  47.8% | R:R   0.9x | n= 289
+        70-80%: Expected    328 pips | Hit 750+  47.3% | R:R   0.9x | n= 366
+        30-40%: Expected    325 pips | Hit 750+  46.9% | R:R   0.9x | n= 320
+        80-90%: Expected    321 pips | Hit 750+  46.3% | R:R   0.9x | n= 380
+        60-70%: Expected    309 pips | Hit 750+  44.9% | R:R   0.8x | n= 323
+
+2. BREAKOUT TIMING
+----------------------------------------------------------------------
+  No breakout timing data available
+
+3. REVERSAL PATTERNS
+----------------------------------------------------------------------
+  C6_rejected_low          : Next candle up 50.0% | 750 hit 54.0% | n= 124
+  C5_long_upper_wick       : Next candle up 50.3% | 750 hit 45.1% | n= 324
+  C5_rejected_low          : Next candle up 49.7% | 750 hit 58.4% | n= 161
+  C5_rejected_high         : Next candle up 47.1% | 750 hit 48.6% | n= 140
+  C5_long_lower_wick       : Next candle up 45.2% | 750 hit 43.8% | n= 365
+
+4. BOTH SIDES PROBABILITY
+----------------------------------------------------------------------
+      broke_up: 20.1% hit both sides | Same side 750: 44.3% | Opposite 750: 13.8%
+    broke_down: 19.6% hit both sides | Same side 750: 51.2% | Opposite 750: 14.7%
+
+5. MAXIMUM FAVORABLE EXCURSION (MFE)
+----------------------------------------------------------------------
+  Target 250 pips:
+      near_highs: Up 5.1% | Down 4.1%
+       near_lows: Up 4.5% | Down 5.9%
+          middle: Up 4.3% | Down 5.0%
+             all: Up 4.6% | Down 4.8%
+  Target 500 pips:
+      near_highs: Up 1.1% | Down 0.2%
+       near_lows: Up 0.6% | Down 0.9%
+          middle: Up 0.8% | Down 1.0%
+             all: Up 0.8% | Down 0.7%
+  Target 750 pips:
+      near_highs: Up 0.5% | Down 0.0%
+       near_lows: Up 0.2% | Down 0.4%
+          middle: Up 0.0% | Down 0.0%
+             all: Up 0.2% | Down 0.1%
+  Target 1000 pips:
+      near_highs: Up 0.0% | Down 0.0%
+       near_lows: Up 0.1% | Down 0.0%
+          middle: Up 0.0% | Down 0.0%
+             all: Up 0.0% | Down 0.0%
+
+6. KEY RECOMMENDATIONS
+----------------------------------------------------------------------
+  • Best entry zone: 50-60% of range
+    - Expected value: 426 pips per trade
+    - Hit 750+ probability: 59.5%
+    - Risk-reward ratio: 1.5:1
+  • If breaking up: 20.1% chance of also breaking down
+  • Consider taking partial profits on breakouts
+
+======================================================================
+END OF REPORT
+======================================================================

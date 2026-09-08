@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BTC ML Results Dashboard</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 30px;
+    background: #f5f5f5;
+    color: #222;
+}
+
+h1 {
+    margin-bottom: 5px;
+}
+
+.subtitle {
+    color: #666;
+    margin-bottom: 30px;
+}
+
+section {
+    background: white;
+    margin: 25px 0;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
+}
+
+.summary {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.summary th,
+.summary td {
+    padding: 9px;
+    border-bottom: 1px solid #ddd;
+    text-align: right;
+}
+
+.summary th:first-child,
+.summary td:first-child {
+    text-align: left;
+}
+</style>
+</head>
+
+<body>
+<h1>BTC ML Results Dashboard</h1>
+<div class="subtitle">
+Generated from <code>btc_ml_results</code>
+</div>
+
+<h2>Model summary</h2><table class="dataframe summary">
+  <thead>
+    <tr style="text-align: right;">
+      <th>model</th>
+      <th>mean_accuracy</th>
+      <th>std_accuracy</th>
+      <th>mean_balanced_accuracy</th>
+      <th>std_balanced_accuracy</th>
+      <th>mean_roc_auc</th>
+      <th>std_roc_auc</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>first_touch_up</td>
+      <td>0.7054</td>
+      <td>0.0288</td>
+      <td>0.7114</td>
+      <td>0.0281</td>
+      <td>0.7814</td>
+      <td>0.0343</td>
+    </tr>
+    <tr>
+      <td>future_break_up</td>
+      <td>0.6866</td>
+      <td>0.0368</td>
+      <td>0.6906</td>
+      <td>0.0327</td>
+      <td>0.7688</td>
+      <td>0.0269</td>
+    </tr>
+    <tr>
+      <td>future_break_down</td>
+      <td>0.6787</td>
+      <td>0.0145</td>
+      <td>0.6775</td>
+      <td>0.0086</td>
+      <td>0.7584</td>
+      <td>0.0153</td>
+    </tr>
+    <tr>
+      <td>C5_direction</td>
+      <td>0.5235</td>
+      <td>0.0132</td>
+      <td>0.5193</td>
+      <td>0.0087</td>
+      <td>0.5353</td>
+      <td>0.0138</td>
+    </tr>
+    <tr>
+      <td>C6_direction</td>
+      <td>0.5148</td>
+      <td>0.0178</td>
+      <td>0.5111</td>
+      <td>0.0159</td>
+      <td>0.5266</td>
+      <td>0.0210</td>
+    </tr>
+    <tr>
+      <td>C7_direction</td>
+      <td>0.4982</td>
+      <td>0.0148</td>
+      <td>0.4955</td>
+      <td>0.0173</td>
+      <td>0.5108</td>
+      <td>0.0358</td>
+    </tr>
+  </tbody>
+</table>
+
+
+            <section>
+                <h2>01 Model Performance</h2>
+                <img src="01_model_performance.png" alt="01_model_performance">
+            </section>
+            
+            <section>
+                <h2>02 Walk Forward Stability</h2>
+                <img src="02_walk_forward_stability.png" alt="02_walk_forward_stability">
+            </section>
+            
+            <section>
+                <h2>03 Probability C5 Direction</h2>
+                <img src="03_probability_C5_direction.png" alt="03_probability_C5_direction">
+            </section>
+            
+            <section>
+                <h2>03 Probability C6 Direction</h2>
+                <img src="03_probability_C6_direction.png" alt="03_probability_C6_direction">
+            </section>
+            
+            <section>
+                <h2>03 Probability C7 Direction</h2>
+                <img src="03_probability_C7_direction.png" alt="03_probability_C7_direction">
+            </section>
+            
+            <section>
+                <h2>03 Probability First Touch Up</h2>
+                <img src="03_probability_first_touch_up.png" alt="03_probability_first_touch_up">
+            </section>
+            
+            <section>
+                <h2>03 Probability Future Break Down</h2>
+                <img src="03_probability_future_break_down.png" alt="03_probability_future_break_down">
+            </section>
+            
+            <section>
+                <h2>03 Probability Future Break Up</h2>
+                <img src="03_probability_future_break_up.png" alt="03_probability_future_break_up">
+            </section>
+            
+            <section>
+                <h2>04 Confusion C5 Direction</h2>
+                <img src="04_confusion_C5_direction.png" alt="04_confusion_C5_direction">
+            </section>
+            
+            <section>
+                <h2>04 Confusion C6 Direction</h2>
+                <img src="04_confusion_C6_direction.png" alt="04_confusion_C6_direction">
+            </section>
+            
+            <section>
+                <h2>04 Confusion C7 Direction</h2>
+                <img src="04_confusion_C7_direction.png" alt="04_confusion_C7_direction">
+            </section>
+            
+            <section>
+                <h2>04 Confusion First Touch Up</h2>
+                <img src="04_confusion_first_touch_up.png" alt="04_confusion_first_touch_up">
+            </section>
+            
+            <section>
+                <h2>04 Confusion Future Break Down</h2>
+                <img src="04_confusion_future_break_down.png" alt="04_confusion_future_break_down">
+            </section>
+            
+            <section>
+                <h2>04 Confusion Future Break Up</h2>
+                <img src="04_confusion_future_break_up.png" alt="04_confusion_future_break_up">
+            </section>
+            
+            <section>
+                <h2>05 Feature Importance C5 Direction</h2>
+                <img src="05_feature_importance_C5_direction.png" alt="05_feature_importance_C5_direction">
+            </section>
+            
+            <section>
+                <h2>05 Feature Importance C6 Direction</h2>
+                <img src="05_feature_importance_C6_direction.png" alt="05_feature_importance_C6_direction">
+            </section>
+            
+            <section>
+                <h2>05 Feature Importance C7 Direction</h2>
+                <img src="05_feature_importance_C7_direction.png" alt="05_feature_importance_C7_direction">
+            </section>
+            
+            <section>
+                <h2>05 Feature Importance Future Break Down</h2>
+                <img src="05_feature_importance_future_break_down.png" alt="05_feature_importance_future_break_down">
+            </section>
+            
+            <section>
+                <h2>05 Feature Importance Future Break Up</h2>
+                <img src="05_feature_importance_future_break_up.png" alt="05_feature_importance_future_break_up">
+            </section>
+            
+            <section>
+                <h2>06 Correlations</h2>
+                <img src="06_correlations.png" alt="06_correlations">
+            </section>
+            
+            <section>
+                <h2>07 Conditional Edges</h2>
+                <img src="07_conditional_edges.png" alt="07_conditional_edges">
+            </section>
+            
+            <section>
+                <h2>08 Baseline Vs Conditional</h2>
+                <img src="08_baseline_vs_conditional.png" alt="08_baseline_vs_conditional">
+            </section>
+            
+            <section>
+                <h2>09 Range Regimes</h2>
+                <img src="09_range_regimes.png" alt="09_range_regimes">
+            </section>
+            
+            <section>
+                <h2>10 Regression Errors</h2>
+                <img src="10_regression_errors.png" alt="10_regression_errors">
+            </section>
+            
+            <section>
+                <h2>11 Regression Correlation</h2>
+                <img src="11_regression_correlation.png" alt="11_regression_correlation">
+            </section>
+            
+            <section>
+                <h2>12 Instrument Behavior By Zone</h2>
+                <img src="12_instrument_behavior_by_zone.png" alt="12_instrument_behavior_by_zone">
+            </section>
+            
+            <section>
+                <h2>13 Range Penetration</h2>
+                <img src="13_range_penetration.png" alt="13_range_penetration">
+            </section>
+            
+            <section>
+                <h2>14 Reference Excursion Levels</h2>
+                <img src="14_reference_excursion_levels.png" alt="14_reference_excursion_levels">
+            </section>
+            
+            <section>
+                <h2>15 Excursion Levels By Zone</h2>
+                <img src="15_excursion_levels_by_zone.png" alt="15_excursion_levels_by_zone">
+            </section>
+            
+            <section>
+                <h2>16 C3C4 C5 Structure</h2>
+                <img src="16_C3C4_C5_structure.png" alt="16_C3C4_C5_structure">
+            </section>
+            
+            <section>
+                <h2>17 Mfe Mae Distribution</h2>
+                <img src="17_mfe_mae_distribution.png" alt="17_mfe_mae_distribution">
+            </section>
+            
+            <section>
+                <h2>18 First Break Behaviour</h2>
+                <img src="18_first_break_behaviour.png" alt="18_first_break_behaviour">
+            </section>
+            
+
+</body>
+</html>
