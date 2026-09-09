@@ -1,0 +1,9 @@
+metric,median_all,p75,p90,unit
+C4 -> C5/C6 max adverse extension for long,28994.99999999971,62820.999999999185,110018.20000000006,pips
+C4 -> C5/C6 max adverse extension for short,27789.000000001397,56950.0,104261.00000000006,pips
+C5/C6 high -> C7 upside projection,0.0,7905.999999999767,36175.9999999999,pips
+C5/C6 low -> C7 downside projection,0.0,9009.999999999127,38547.9999999993,pips
+C7 breaks above C5/C6 high,33.53383458646616,,,%
+C7 breaks below C5/C6 low,33.89473684210526,,,%
+C7 closes above C5/C6 high,17.954887218045112,,,%
+C7 closes below C5/C6 low,17.654135338345863,,,%

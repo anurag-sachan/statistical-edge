@@ -16,11 +16,10 @@ Expected input files include:
     model_*_predictions.csv
     regression_*_metrics.csv
     feature_importance_*.csv
-    instrument_behavior_rows.csv
-    instrument_behavior_by_range_zone.csv
-    range_penetration_by_zone.csv
-    reference_excursion_levels.csv
-    C3C4_C5_structure_behavior.csv
+    c4_c5_c6_c7_behavior_rows.csv
+    c4_c5_c6_c7_by_zone.csv
+    c7_projection_levels.csv
+    c4_c5_c6_c7_summary.csv
 
 Usage:
     python visualize_btc_ml_results.py
@@ -635,499 +634,327 @@ def plot_regression_metrics(
 
 
 # ---------------------------------------------------------------------
-# 8. Instrument behaviour / entry-zone research
+# 8. C4 -> C5/C6 -> C7 instrument behaviour
 # ---------------------------------------------------------------------
 
-def plot_instrument_behavior_by_zone(
-    results_dir: Path,
-    output_dir: Path,
-) -> None:
-    """Visualize the new descriptive BTC behaviour study by C4 range zone."""
-    path = results_dir / "instrument_behavior_by_range_zone.csv"
+def _zone_order(df: pd.DataFrame) -> pd.DataFrame:
+    order = [
+        "0-10%", "10-25%", "25-40%", "40-50%",
+        "50-60%", "60-75%", "75-90%", "90-100%",
+    ]
+    df = df.copy()
+    df["C4_zone"] = pd.Categorical(
+        df["C4_zone"], categories=order, ordered=True
+    )
+    return df.sort_values("C4_zone")
+
+
+def plot_c4_c5c6_mae_by_zone(results_dir: Path, output_dir: Path) -> None:
+    """C5/C6 maximum adverse extension measured from C4 close."""
+    path = results_dir / "c4_c5_c6_c7_by_zone.csv"
     df = safe_read_csv(path)
+    filename = "12_c4_c5c6_mae_by_zone.png"
 
     if df is None:
-        no_data(
-            output_dir,
-            "Instrument behaviour by range zone",
-            "12_instrument_behavior_by_zone.png",
-        )
+        no_data(output_dir, "C4 to C5/C6 MAE by zone", filename)
         return
 
     required = {
         "C4_zone",
-        "n",
-        "median_MFE_up",
-        "median_MFE_down",
-        "p75_MFE_up",
-        "p75_MFE_down",
+        "median_C4_to_C5C6_MAE_long",
+        "p75_C4_to_C5C6_MAE_long",
+        "p90_C4_to_C5C6_MAE_long",
+        "median_C4_to_C5C6_MAE_short",
+        "p75_C4_to_C5C6_MAE_short",
+        "p90_C4_to_C5C6_MAE_short",
     }
     if not required.issubset(df.columns):
-        no_data(
-            output_dir,
-            "Instrument behaviour by range zone",
-            "12_instrument_behavior_by_zone.png",
-        )
+        no_data(output_dir, "C4 to C5/C6 MAE by zone", filename)
         return
 
-    # Keep the natural low -> high order rather than alphabetical order.
-    zone_order = [
-        "0-10%", "10-25%", "25-40%", "40-50%",
-        "50-60%", "60-75%", "75-90%", "90-100%",
-    ]
-    df["C4_zone"] = pd.Categorical(
-        df["C4_zone"], categories=zone_order, ordered=True
-    )
-    df = df.sort_values("C4_zone").dropna(subset=["median_MFE_up", "median_MFE_down"])
-
+    df = _zone_order(df)
     x = np.arange(len(df))
-    width = 0.19
+    width = 0.13
 
-    fig, ax = plt.subplots(figsize=(15, 8))
-    ax.bar(x - 1.5 * width, df["median_MFE_up"], width, label="Median MFE up")
-    ax.bar(x - 0.5 * width, df["p75_MFE_up"], width, label="75th percentile MFE up")
-    ax.bar(x + 0.5 * width, df["median_MFE_down"], width, label="Median MFE down")
-    ax.bar(x + 1.5 * width, df["p75_MFE_down"], width, label="75th percentile MFE down")
+    fig, ax = plt.subplots(figsize=(16, 8))
+    ax.bar(x - 2.5*width, df["median_C4_to_C5C6_MAE_long"], width, label="Long median MAE")
+    ax.bar(x - 1.5*width, df["p75_C4_to_C5C6_MAE_long"], width, label="Long 75th")
+    ax.bar(x - 0.5*width, df["p90_C4_to_C5C6_MAE_long"], width, label="Long 90th")
+    ax.bar(x + 0.5*width, df["median_C4_to_C5C6_MAE_short"], width, label="Short median MAE")
+    ax.bar(x + 1.5*width, df["p75_C4_to_C5C6_MAE_short"], width, label="Short 75th")
+    ax.bar(x + 2.5*width, df["p90_C4_to_C5C6_MAE_short"], width, label="Short 90th")
 
     ax.set_xticks(x)
     ax.set_xticklabels(df["C4_zone"].astype(str))
-    ax.set_xlabel("C4 close position inside prior 8H range")
-    ax.set_ylabel("Future excursion from C4 close (pips)")
-    ax.set_title("BTC excursion behaviour by 8H range zone")
-    ax.legend(ncol=2)
+    ax.set_xlabel("C4 close position inside completed 8H range")
+    ax.set_ylabel("Maximum adverse extension from C4 close (pips)")
+    ax.set_title("C5/C6 maximum pullback from C4 close")
+    ax.legend(ncol=3)
     ax.grid(axis="y", alpha=0.25)
+    save_fig(fig, output_dir / filename)
 
-    save_fig(fig, output_dir / "12_instrument_behavior_by_zone.png")
 
-
-def plot_range_penetration(
-    results_dir: Path,
-    output_dir: Path,
-) -> None:
-    """Show how much of the original 8H range BTC tends to penetrate."""
-    path = results_dir / "range_penetration_by_zone.csv"
+def plot_c7_projection_by_zone(results_dir: Path, output_dir: Path) -> None:
+    """C7 projection beyond the C5/C6 combined high/low."""
+    path = results_dir / "c4_c5_c6_c7_by_zone.csv"
     df = safe_read_csv(path)
+    filename = "13_c7_projection_by_zone.png"
 
     if df is None:
-        no_data(
-            output_dir,
-            "Range penetration",
-            "13_range_penetration.png",
-        )
+        no_data(output_dir, "C7 projection by zone", filename)
         return
 
     required = {
         "C4_zone",
-        "median_MFE_up_pct_8h",
-        "p75_MFE_up_pct_8h",
-        "median_MFE_down_pct_8h",
-        "p75_MFE_down_pct_8h",
+        "median_C7_projection_up",
+        "p75_C7_projection_up",
+        "p90_C7_projection_up",
+        "median_C7_projection_down",
+        "p75_C7_projection_down",
+        "p90_C7_projection_down",
     }
     if not required.issubset(df.columns):
-        no_data(output_dir, "Range penetration", "13_range_penetration.png")
+        no_data(output_dir, "C7 projection by zone", filename)
         return
 
-    zone_order = [
-        "0-10%", "10-25%", "25-40%", "40-50%",
-        "50-60%", "60-75%", "75-90%", "90-100%",
-    ]
-    df["C4_zone"] = pd.Categorical(
-        df["C4_zone"], categories=zone_order, ordered=True
-    )
-    df = df.sort_values("C4_zone")
-
+    df = _zone_order(df)
     x = np.arange(len(df))
-    width = 0.20
+    width = 0.13
 
-    fig, ax = plt.subplots(figsize=(15, 8))
-    ax.bar(
-        x - 1.5 * width,
-        df["median_MFE_up_pct_8h"],
-        width,
-        label="Median up",
-    )
-    ax.bar(
-        x - 0.5 * width,
-        df["p75_MFE_up_pct_8h"],
-        width,
-        label="75th percentile up",
-    )
-    ax.bar(
-        x + 0.5 * width,
-        df["median_MFE_down_pct_8h"],
-        width,
-        label="Median down",
-    )
-    ax.bar(
-        x + 1.5 * width,
-        df["p75_MFE_down_pct_8h"],
-        width,
-        label="75th percentile down",
-    )
+    fig, ax = plt.subplots(figsize=(16, 8))
+    ax.bar(x - 2.5*width, df["median_C7_projection_up"], width, label="Up median")
+    ax.bar(x - 1.5*width, df["p75_C7_projection_up"], width, label="Up 75th")
+    ax.bar(x - 0.5*width, df["p90_C7_projection_up"], width, label="Up 90th")
+    ax.bar(x + 0.5*width, df["median_C7_projection_down"], width, label="Down median")
+    ax.bar(x + 1.5*width, df["p75_C7_projection_down"], width, label="Down 75th")
+    ax.bar(x + 2.5*width, df["p90_C7_projection_down"], width, label="Down 90th")
 
-    ax.axhline(100, linestyle="--", linewidth=1, label="100% of original 8H range")
     ax.set_xticks(x)
     ax.set_xticklabels(df["C4_zone"].astype(str))
-    ax.set_xlabel("C4 close position inside prior 8H range")
-    ax.set_ylabel("Maximum future excursion (% of original 8H range)")
-    ax.set_title("How far BTC travels relative to the existing 8H range")
-    ax.legend(ncol=2)
+    ax.set_xlabel("C4 close position inside completed 8H range")
+    ax.set_ylabel("C7 projection beyond C5/C6 extreme (pips)")
+    ax.set_title("C7 maximum projection after C5/C6 establishes the extreme")
+    ax.legend(ncol=3)
     ax.grid(axis="y", alpha=0.25)
+    save_fig(fig, output_dir / filename)
 
-    save_fig(fig, output_dir / "13_range_penetration.png")
 
-
-def plot_reference_excursion_levels(
-    results_dir: Path,
-    output_dir: Path,
-) -> None:
-    """Plot empirical excursion probabilities for reference pip distances."""
-    path = results_dir / "reference_excursion_levels.csv"
+def plot_c7_projection_levels(results_dir: Path, output_dir: Path) -> None:
+    """Overall probability that C7 extends X pips beyond C5/C6 extreme."""
+    path = results_dir / "c7_projection_levels.csv"
     df = safe_read_csv(path)
+    filename = "14_c7_projection_levels.png"
 
     if df is None:
-        no_data(
-            output_dir,
-            "Reference excursion levels",
-            "14_reference_excursion_levels.png",
-        )
+        no_data(output_dir, "C7 projection levels", filename)
         return
 
-    required = {"zone", "direction", "level_pips", "hit_probability"}
+    required = {"direction", "level_pips", "hit_probability"}
     if not required.issubset(df.columns):
-        no_data(
-            output_dir,
-            "Reference excursion levels",
-            "14_reference_excursion_levels.png",
-        )
+        no_data(output_dir, "C7 projection levels", filename)
         return
 
-    # Aggregate across range zones for the instrument-level view.
     summary = (
         df.groupby(["direction", "level_pips"], as_index=False)["hit_probability"]
         .mean()
+        .sort_values(["direction", "level_pips"])
     )
 
     fig, ax = plt.subplots(figsize=(14, 8))
-
     for direction, group in summary.groupby("direction"):
-        group = group.sort_values("level_pips")
         ax.plot(
             group["level_pips"],
             group["hit_probability"] * 100,
             marker="o",
-            label=f"{direction.title()} excursion",
+            label=f"{direction.title()} projection",
         )
 
-    ax.set_xlabel("Favourable excursion from C4 close (pips)")
-    ax.set_ylabel("Probability of reaching level (%)")
-    ax.set_title(
-        "BTC empirical excursion probability from C4 close\n"
-        "Descriptive only — not TP-before-SL probabilities"
-    )
+    ax.set_xlabel("Projection beyond C5/C6 extreme (pips)")
+    ax.set_ylabel("Probability C7 reaches level (%)")
+    ax.set_title("C7 projection probability from the C5/C6 high/low")
     ax.set_ylim(0, 100)
     ax.legend()
     ax.grid(alpha=0.25)
+    save_fig(fig, output_dir / filename)
 
-    save_fig(fig, output_dir / "14_reference_excursion_levels.png")
 
-
-def plot_reference_excursion_by_zone(
-    results_dir: Path,
-    output_dir: Path,
-) -> None:
-    """Show the same excursion levels split by the C4 range zone."""
-    path = results_dir / "reference_excursion_levels.csv"
+def plot_c7_projection_by_zone_heatmap(results_dir: Path, output_dir: Path) -> None:
+    """Heatmap of C7 projection probabilities by C4 zone."""
+    path = results_dir / "c7_projection_levels.csv"
     df = safe_read_csv(path)
+    filename = "15_c7_projection_by_zone.png"
 
     if df is None:
-        no_data(
-            output_dir,
-            "Reference excursion levels by zone",
-            "15_excursion_levels_by_zone.png",
-        )
+        no_data(output_dir, "C7 projection by zone", filename)
         return
 
     required = {"zone", "direction", "level_pips", "hit_probability"}
     if not required.issubset(df.columns):
-        no_data(
-            output_dir,
-            "Reference excursion levels by zone",
-            "15_excursion_levels_by_zone.png",
-        )
+        no_data(output_dir, "C7 projection by zone", filename)
         return
+
+    levels = [x for x in [250, 500, 750, 800, 1000, 1500, 2000]
+              if x in df["level_pips"].dropna().unique()]
+    if not levels:
+        levels = sorted(df["level_pips"].dropna().unique())
 
     zone_order = [
         "0-10%", "10-25%", "25-40%", "40-50%",
         "50-60%", "60-75%", "75-90%", "90-100%",
     ]
-    level_order = sorted(df["level_pips"].dropna().unique())
+    zones = [z for z in zone_order if z in df["zone"].astype(str).unique()]
+    if not zones:
+        zones = sorted(df["zone"].astype(str).unique())
 
-    # Heatmap-like matrix for the most useful 750/800/1000 levels.
-    levels = [v for v in [500, 750, 800, 1000] if v in level_order]
-    if not levels:
-        levels = level_order
-
-    zone_names = [z for z in zone_order if z in df["zone"].astype(str).unique()]
-    if not zone_names:
-        zone_names = sorted(df["zone"].astype(str).unique())
-
-    fig, axes = plt.subplots(
-        1,
-        2,
-        figsize=(16, 7),
-        sharey=True,
-    )
-
+    fig, axes = plt.subplots(1, 2, figsize=(17, 8), sharey=True)
     for ax, direction in zip(axes, ["up", "down"]):
-        sub = df[
-            (df["direction"] == direction)
-            & (df["level_pips"].isin(levels))
-        ].copy()
+        sub = df[(df["direction"] == direction) & (df["level_pips"].isin(levels))]
+        matrix = sub.pivot_table(
+            index="zone", columns="level_pips", values="hit_probability", aggfunc="mean"
+        ).reindex(index=zones, columns=levels)
 
-        matrix = (
-            sub.pivot_table(
-                index="zone",
-                columns="level_pips",
-                values="hit_probability",
-                aggfunc="mean",
-            )
-            .reindex(index=zone_names, columns=levels)
-        )
-
-        im = ax.imshow(
-            matrix.values * 100,
-            aspect="auto",
-            interpolation="nearest",
-        )
-
+        im = ax.imshow(matrix.values * 100, aspect="auto", interpolation="nearest")
         ax.set_xticks(np.arange(len(matrix.columns)))
         ax.set_xticklabels([str(int(v)) for v in matrix.columns])
         ax.set_yticks(np.arange(len(matrix.index)))
         ax.set_yticklabels(matrix.index.astype(str))
-        ax.set_xlabel("Excursion level (pips)")
-        ax.set_title(f"{direction.title()} excursion")
+        ax.set_xlabel("C7 projection beyond C5/C6 extreme (pips)")
+        ax.set_title(f"{direction.title()} projection")
 
         for i in range(matrix.shape[0]):
             for j in range(matrix.shape[1]):
                 value = matrix.iloc[i, j]
                 if pd.notna(value):
-                    ax.text(
-                        j,
-                        i,
-                        f"{value * 100:.1f}%",
-                        ha="center",
-                        va="center",
-                        fontsize=9,
-                    )
-
-        fig.colorbar(im, ax=ax, label="Hit probability (%)")
+                    ax.text(j, i, f"{value * 100:.1f}%", ha="center", va="center", fontsize=9)
+        fig.colorbar(im, ax=ax, label="Probability (%)")
 
     axes[0].set_ylabel("C4 close zone")
-    fig.suptitle(
-        "Reference excursion probability by 8H range zone\n"
-        "Use to discover natural BTC travel behaviour, not to force a target"
-    )
-
-    save_fig(fig, output_dir / "15_excursion_levels_by_zone.png")
+    fig.suptitle("C7 projection probability by C4 range zone")
+    save_fig(fig, output_dir / filename)
 
 
-def plot_c3c4_c5_structure(
-    results_dir: Path,
-    output_dir: Path,
-) -> None:
-    """Compare C3/C4 -> C5 structural conditions."""
-    path = results_dir / "C3C4_C5_structure_behavior.csv"
+def plot_mae_vs_projection(results_dir: Path, output_dir: Path) -> None:
+    """Relate C5/C6 pullback size from C4 to C7 projection size."""
+    path = results_dir / "c4_c5_c6_c7_behavior_rows.csv"
     df = safe_read_csv(path)
+    filename = "16_mae_vs_c7_projection.png"
 
     if df is None:
-        no_data(
-            output_dir,
-            "C3/C4 to C5 structure",
-            "16_C3C4_C5_structure.png",
-        )
+        no_data(output_dir, "MAE vs C7 projection", filename)
         return
 
     required = {
-        "pattern",
-        "n",
-        "up_first",
-        "down_first",
-        "opposite_after_first",
-        "median_MFE_up",
-        "median_MFE_down",
+        "MAE_long_C5C6_pips", "MAE_short_C5C6_pips",
+        "C7_projection_up_pips", "C7_projection_down_pips",
     }
     if not required.issubset(df.columns):
-        no_data(
-            output_dir,
-            "C3/C4 to C5 structure",
-            "16_C3C4_C5_structure.png",
-        )
+        no_data(output_dir, "MAE vs C7 projection", filename)
         return
 
-    df = df.sort_values("n", ascending=True)
+    fig, axes = plt.subplots(1, 2, figsize=(16, 7))
+    axes[0].scatter(df["MAE_long_C5C6_pips"], df["C7_projection_up_pips"], alpha=0.25, s=12)
+    axes[0].set_xlabel("C5/C6 MAE against long from C4 close (pips)")
+    axes[0].set_ylabel("C7 upside projection beyond C5/C6 high (pips)")
+    axes[0].set_title("Long-side pullback vs C7 upside projection")
+    axes[0].grid(alpha=0.25)
 
-    fig, ax = plt.subplots(
-        figsize=(14, max(7, len(df) * 0.45))
-    )
-    y = np.arange(len(df))
-    width = 0.22
+    axes[1].scatter(df["MAE_short_C5C6_pips"], df["C7_projection_down_pips"], alpha=0.25, s=12)
+    axes[1].set_xlabel("C5/C6 MAE against short from C4 close (pips)")
+    axes[1].set_ylabel("C7 downside projection beyond C5/C6 low (pips)")
+    axes[1].set_title("Short-side pullback vs C7 downside projection")
+    axes[1].grid(alpha=0.25)
 
-    ax.barh(y - width, df["up_first"] * 100, width, label="First break up")
-    ax.barh(y, df["down_first"] * 100, width, label="First break down")
-    ax.barh(
-        y + width,
-        df["opposite_after_first"] * 100,
-        width,
-        label="Opposite side after first break",
-    )
-
-    ax.set_yticks(y)
-    ax.set_yticklabels(
-        [clean_name(v) for v in df["pattern"]]
-    )
-    ax.set_xlabel("Probability (%)")
-    ax.set_title("C3/C4 structure and C5 behaviour")
-    ax.set_xlim(0, 100)
-    ax.legend()
-    ax.grid(axis="x", alpha=0.25)
-
-    save_fig(fig, output_dir / "16_C3C4_C5_structure.png")
+    fig.suptitle("Does C5/C6 adverse extension relate to the C7 target projection?")
+    save_fig(fig, output_dir / filename)
 
 
-def plot_mfe_mae_distribution(
-    results_dir: Path,
-    output_dir: Path,
-) -> None:
-    """Visualize raw MFE/MAE distributions from the row-level study."""
-    path = results_dir / "instrument_behavior_rows.csv"
+def plot_c7_continuation_by_zone(results_dir: Path, output_dir: Path) -> None:
+    """Probability C7 actually exceeds/closes beyond the C5/C6 extreme."""
+    path = results_dir / "c4_c5_c6_c7_by_zone.csv"
     df = safe_read_csv(path)
+    filename = "17_c7_continuation_by_zone.png"
 
     if df is None:
-        no_data(
-            output_dir,
-            "MFE/MAE distribution",
-            "17_mfe_mae_distribution.png",
-        )
-        return
-
-    required = {
-        "mfe_up_pips",
-        "mfe_down_pips",
-        "mae_long_pips",
-        "mae_short_pips",
-    }
-    if not required.issubset(df.columns):
-        no_data(output_dir, "MFE/MAE distribution", "17_mfe_mae_distribution.png")
-        return
-
-    # Cap only the displayed x-axis at the 99th percentile so extreme BTC
-    # observations do not compress the useful distribution. The raw CSV
-    # remains untouched.
-    values = pd.concat(
-        [
-            df["mfe_up_pips"],
-            df["mfe_down_pips"],
-            df["mae_long_pips"],
-            df["mae_short_pips"],
-        ]
-    ).dropna()
-    if values.empty:
-        no_data(output_dir, "MFE/MAE distribution", "17_mfe_mae_distribution.png")
-        return
-
-    xmax = values.quantile(0.99)
-
-    fig, ax = plt.subplots(figsize=(14, 8))
-    ax.hist(
-        df["mfe_up_pips"].clip(upper=xmax),
-        bins=50,
-        alpha=0.45,
-        label="MFE up",
-    )
-    ax.hist(
-        df["mfe_down_pips"].clip(upper=xmax),
-        bins=50,
-        alpha=0.45,
-        label="MFE down",
-    )
-    ax.hist(
-        df["mae_long_pips"].clip(upper=xmax),
-        bins=50,
-        alpha=0.30,
-        label="MAE long",
-    )
-
-    ax.set_xlabel("Excursion from C4 close (pips)")
-    ax.set_ylabel("Observations")
-    ax.set_title(
-        "Distribution of BTC future excursion from C4 close\n"
-        "Display clipped at 99th percentile; CSV retains all observations"
-    )
-    ax.legend()
-    ax.grid(axis="y", alpha=0.25)
-
-    save_fig(fig, output_dir / "17_mfe_mae_distribution.png")
-
-
-def plot_first_break_behaviour(
-    results_dir: Path,
-    output_dir: Path,
-) -> None:
-    """Show first-break side and subsequent opposite-side probability by zone."""
-    path = results_dir / "instrument_behavior_by_range_zone.csv"
-    df = safe_read_csv(path)
-
-    if df is None:
-        no_data(
-            output_dir,
-            "First-break behaviour",
-            "18_first_break_behaviour.png",
-        )
+        no_data(output_dir, "C7 continuation by zone", filename)
         return
 
     required = {
         "C4_zone",
-        "up_first",
-        "down_first",
-        "opposite_after_first",
+        "c7_breaks_C5C6_high", "c7_breaks_C5C6_low",
+        "c7_close_above_C5C6_high", "c7_close_below_C5C6_low",
     }
     if not required.issubset(df.columns):
-        no_data(output_dir, "First-break behaviour", "18_first_break_behaviour.png")
+        no_data(output_dir, "C7 continuation by zone", filename)
         return
 
-    zone_order = [
-        "0-10%", "10-25%", "25-40%", "40-50%",
-        "50-60%", "60-75%", "75-90%", "90-100%",
-    ]
-    df["C4_zone"] = pd.Categorical(
-        df["C4_zone"], categories=zone_order, ordered=True
-    )
-    df = df.sort_values("C4_zone")
-
+    df = _zone_order(df)
     x = np.arange(len(df))
-    width = 0.25
+    width = 0.19
 
-    fig, ax = plt.subplots(figsize=(15, 8))
-    ax.bar(x - width, df["up_first"] * 100, width, label="First break up")
-    ax.bar(x, df["down_first"] * 100, width, label="First break down")
-    ax.bar(
-        x + width,
-        df["opposite_after_first"] * 100,
-        width,
-        label="Opposite side after first break",
-    )
+    fig, ax = plt.subplots(figsize=(16, 8))
+    ax.bar(x - 1.5*width, df["c7_breaks_C5C6_high"] * 100, width, label="C7 high breaks C5/C6 high")
+    ax.bar(x - 0.5*width, df["c7_close_above_C5C6_high"] * 100, width, label="C7 closes above C5/C6 high")
+    ax.bar(x + 0.5*width, df["c7_breaks_C5C6_low"] * 100, width, label="C7 low breaks C5/C6 low")
+    ax.bar(x + 1.5*width, df["c7_close_below_C5C6_low"] * 100, width, label="C7 closes below C5/C6 low")
 
     ax.set_xticks(x)
     ax.set_xticklabels(df["C4_zone"].astype(str))
-    ax.set_xlabel("C4 close position inside prior 8H range")
+    ax.set_xlabel("C4 close position inside completed 8H range")
     ax.set_ylabel("Probability (%)")
     ax.set_ylim(0, 100)
-    ax.set_title("Break-side behaviour by 8H range zone")
-    ax.legend()
+    ax.set_title("C7 continuation beyond the C5/C6 extreme")
+    ax.legend(ncol=2)
     ax.grid(axis="y", alpha=0.25)
+    save_fig(fig, output_dir / filename)
 
-    save_fig(fig, output_dir / "18_first_break_behaviour.png")
+
+def plot_c4_sequence_distributions(results_dir: Path, output_dir: Path) -> None:
+    """Distributions of C5/C6 MAE and C7 projection."""
+    path = results_dir / "c4_c5_c6_c7_behavior_rows.csv"
+    df = safe_read_csv(path)
+    filename = "18_c4_sequence_distributions.png"
+
+    if df is None:
+        no_data(output_dir, "C4 sequence distributions", filename)
+        return
+
+    required = {
+        "MAE_long_C5C6_pips", "MAE_short_C5C6_pips",
+        "C7_projection_up_pips", "C7_projection_down_pips",
+    }
+    if not required.issubset(df.columns):
+        no_data(output_dir, "C4 sequence distributions", filename)
+        return
+
+    values = pd.concat([
+        df["MAE_long_C5C6_pips"], df["MAE_short_C5C6_pips"],
+        df["C7_projection_up_pips"], df["C7_projection_down_pips"],
+    ]).dropna()
+    if values.empty:
+        no_data(output_dir, "C4 sequence distributions", filename)
+        return
+
+    xmax = values.quantile(0.99)
+    fig, axes = plt.subplots(1, 2, figsize=(16, 7))
+
+    axes[0].hist(df["MAE_long_C5C6_pips"].clip(upper=xmax), bins=50, alpha=0.45, label="Long MAE")
+    axes[0].hist(df["MAE_short_C5C6_pips"].clip(upper=xmax), bins=50, alpha=0.45, label="Short MAE")
+    axes[0].set_xlabel("Maximum C5/C6 adverse extension from C4 close (pips)")
+    axes[0].set_ylabel("Observations")
+    axes[0].set_title("C5/C6 pullback distribution")
+    axes[0].legend()
+    axes[0].grid(axis="y", alpha=0.25)
+
+    axes[1].hist(df["C7_projection_up_pips"].clip(upper=xmax), bins=50, alpha=0.45, label="Up projection")
+    axes[1].hist(df["C7_projection_down_pips"].clip(upper=xmax), bins=50, alpha=0.45, label="Down projection")
+    axes[1].set_xlabel("C7 projection beyond C5/C6 extreme (pips)")
+    axes[1].set_ylabel("Observations")
+    axes[1].set_title("C7 target-projection distribution")
+    axes[1].legend()
+    axes[1].grid(axis="y", alpha=0.25)
+
+    fig.suptitle("C4 -> C5/C6 MAE and C7 projection distributions")
+    save_fig(fig, output_dir / filename)
 
 
 # ---------------------------------------------------------------------
@@ -1382,41 +1209,14 @@ def main() -> None:
         output_dir,
     )
 
-    # New descriptive instrument-behaviour visualizations.
-    plot_instrument_behavior_by_zone(
-        results_dir,
-        output_dir,
-    )
-
-    plot_range_penetration(
-        results_dir,
-        output_dir,
-    )
-
-    plot_reference_excursion_levels(
-        results_dir,
-        output_dir,
-    )
-
-    plot_reference_excursion_by_zone(
-        results_dir,
-        output_dir,
-    )
-
-    plot_c3c4_c5_structure(
-        results_dir,
-        output_dir,
-    )
-
-    plot_mfe_mae_distribution(
-        results_dir,
-        output_dir,
-    )
-
-    plot_first_break_behaviour(
-        results_dir,
-        output_dir,
-    )
+    # C4 -> C5/C6 -> C7 descriptive instrument-behaviour visualizations.
+    plot_c4_c5c6_mae_by_zone(results_dir, output_dir)
+    plot_c7_projection_by_zone(results_dir, output_dir)
+    plot_c7_projection_levels(results_dir, output_dir)
+    plot_c7_projection_by_zone_heatmap(results_dir, output_dir)
+    plot_mae_vs_projection(results_dir, output_dir)
+    plot_c7_continuation_by_zone(results_dir, output_dir)
+    plot_c4_sequence_distributions(results_dir, output_dir)
 
     build_summary(
         results_dir,
